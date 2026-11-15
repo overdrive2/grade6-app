@@ -60,6 +60,10 @@
 .visual-note{padding:5px 8px;border:1px solid #cbd9c7;border-radius:7px;background:#f3f6eb;color:var(--ink);font-size:13px;font-weight:700}
 .visual-note.playing{background:#416a35;border-color:#416a35;color:#fff}
 .visual-step{font-size:11px;color:var(--muted)}
+.account-link{border:1px solid #cbd8ad;background:#ebf2d9;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.account-panel{max-width:720px;margin-inline:auto}
+.account-panel input{background:#fffefa;border:1px solid #acb9aa;border-radius:9px;padding:9px 12px;color:var(--ink);max-width:420px;width:100%}
+.account-panel input:focus-visible{outline:3px solid #9b6100;outline-offset:3px}
 .audio-credit{font-size:12px}.audio-credit a{text-decoration:underline;text-underline-offset:2px}
 #audio-status:not(:empty){margin-top:8px;font-size:13px;color:var(--muted)}
 .lesson-visual .lesson-notation{margin:12px 0 0}

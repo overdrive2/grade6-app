@@ -1,15 +1,21 @@
 const get = id => document.getElementById(id);
 const storageKey='smcc-studio-v1';
-let progress={answered:0,correct:0,checks:{},drafts:{},deadline:0,lessons:{}};
+const blankProgress=()=>({answered:0,correct:0,checks:{},drafts:{},deadline:0,lessons:{},instrument:''});
+let progress=blankProgress();
+let saveAccountProgress;
+let renderAccountView;
 try { progress={...progress,...JSON.parse(localStorage.getItem(storageKey))}; } catch {}
-function save() {
-  try { localStorage.setItem(storageKey,JSON.stringify(progress)); } catch {}
+function save(persist=true) {
+  if(persist){
+    if(saveAccountProgress) saveAccountProgress();
+    else try { localStorage.setItem(storageKey,JSON.stringify(progress)); } catch {}
+  }
   get('answered').textContent=progress.answered;
   get('accuracy').textContent=progress.answered?Math.round(100*progress.correct/progress.answered)+'%':'–';
   get('checked').textContent=Object.values(progress.checks).filter(Boolean).length;
   get('completed').textContent=lessons.filter(lesson=>progress.lessons[lesson.id]).length+'/'+lessons.length;
 }
-save();
+save(false);
 const titles={
   theory:['MUSIC THEORY','ทฤษฎีดนตรี','เลือกหัวข้อและตอบโจทย์พร้อมเฉลย'],
   ear:['EAR TRAINING','โสตทักษะ','ฟังเสียงตัวอย่างผ่านลำโพงหรือหูฟัง'],
@@ -212,7 +218,7 @@ function renderSong(){
     stopBacking();
     const structure=Number(get('structure').value);
     get('sections').innerHTML=songParts[0].map((part,index)=>`<span>${part} · ${songParts[1][structure][index]} ห้อง</span>`).join('');
-    get('drafts').innerHTML=songParts[0].slice(1).map(part=>`<label class="field">${part}<textarea data-part="${part}" placeholder="เขียนคำร้องที่นี่"></textarea></label>`).join('');
+    get('drafts').innerHTML=songParts[0].slice(1).map(part=>`<label class="field">${part}<textarea data-part="${part}" maxlength="5000" placeholder="เขียนคำร้องที่นี่"></textarea></label>`).join('');
     for(const field of room.querySelectorAll('textarea')){
       const key=`${structure}:${field.dataset.part}`;
       field.value=progress.drafts[key]||'';
@@ -379,7 +385,7 @@ function route(){
   closeLessonVisual=undefined;
   stopAudio();
   const [name,topic]=location.hash.slice(1).split('/');
-  const active=name==='lessons'||Object.hasOwn(titles,name);
+  const active=name==='account'||name==='lessons'||Object.hasOwn(titles,name);
   get('home').hidden=active;
   room.hidden=!active;
   if(!active){
@@ -388,7 +394,10 @@ function route(){
     else window.scrollTo(0,0);
     return;
   }
-  if(name==='lessons'){
+  if(name==='account'){
+    if(renderAccountView) renderAccountView();
+    else room.innerHTML='<h1 tabindex="-1">บัญชีผู้เรียน</h1><p>กำลังโหลดข้อมูลบัญชี…</p>';
+  }else if(name==='lessons'){
     const lesson=lessons.find(entry=>entry.id===topic);
     if(lesson) renderLesson(lesson);
     else renderLessonIndex();
