@@ -19,18 +19,22 @@ function sendVerification(PDO $db, array $config, string $id, string $email): ?b
             require_once __DIR__ . '/vendor/PHPMailer/' . $file;
         }
         $smtp = $config['smtp'];
-        if (!($config['local_http'] ?? false) && !in_array($smtp['encryption'], ['ssl','tls'], true)) {
-            throw new RuntimeException('SMTP encryption is required');
-        }
         $mail = new PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host = $smtp['host'];
-        $mail->Port = $smtp['port'];
-        $mail->SMTPAuth = !($config['local_http'] ?? false) || !empty($smtp['username']);
-        $mail->Username = $smtp['username'];
-        $mail->Password = $smtp['password'];
-        $mail->SMTPSecure = $smtp['encryption'];
-        $mail->Timeout = 8;
+        if (($smtp['transport'] ?? 'smtp') === 'mail') {
+            $mail->isMail();
+        } else {
+            if (!($config['local_http'] ?? false) && !in_array($smtp['encryption'], ['ssl','tls'], true)) {
+                throw new RuntimeException('SMTP encryption is required');
+            }
+            $mail->isSMTP();
+            $mail->Host = $smtp['host'];
+            $mail->Port = $smtp['port'];
+            $mail->SMTPAuth = !($config['local_http'] ?? false) || !empty($smtp['username']);
+            $mail->Username = $smtp['username'];
+            $mail->Password = $smtp['password'];
+            $mail->SMTPSecure = $smtp['encryption'];
+            $mail->Timeout = 8;
+        }
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
         $mail->setFrom($smtp['from'], 'SMCC Practice Studio');
