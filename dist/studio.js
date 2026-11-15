@@ -64,7 +64,7 @@ function playQuestion(question){
 }
 function drawMusic(canvas, quiz){
   const ctx=canvas.getContext('2d');
-  const bottom=89, lineHeight=12, left=12, begin=118, spacing=39;
+  const bottom=89, lineHeight=12, left=12, begin=quiz.meter?118:78, spacing=39;
   const width=begin+quiz.degrees.length*spacing+16;
   canvas.width=width*2;
   canvas.height=250;
@@ -78,23 +78,38 @@ function drawMusic(canvas, quiz){
   ctx.fillText('𝄞',17,90);
   ctx.font='bold 22px serif';
   ctx.textAlign='center';
-  ctx.fillText(quiz.meter[0],82,61);
-  ctx.fillText(quiz.meter[2],82,84);
-  line(begin+(quiz.beats-.5)*spacing,bottom-48,begin+(quiz.beats-.5)*spacing,bottom);
+  if(quiz.meter){
+    ctx.fillText(quiz.meter[0],82,61);
+    ctx.fillText(quiz.meter[2],82,84);
+    for(let bar=quiz.beats;bar<quiz.degrees.length;bar+=quiz.beats){
+      const x=begin+(bar-.5)*spacing;
+      line(x,bottom-48,x,bottom);
+    }
+  }
   line(width-13,bottom-48,width-13,bottom);
   line(width-17,bottom-48,width-17,bottom);
   quiz.degrees.forEach((degree,index)=>{
     const x=begin+index*spacing, y=bottom+(2-degree)*6;
-    if(degree===0) line(x-10,y,x+10,y);
+    ctx.strokeStyle=ctx.fillStyle=index===quiz.position?'#527820':'#19382f';
+    for(let ledger=0;ledger>=degree;ledger-=2){
+      const ledgerY=bottom+(2-ledger)*6;
+      line(x-10,ledgerY,x+10,ledgerY);
+    }
+    for(let ledger=12;ledger<=degree;ledger+=2){
+      const ledgerY=bottom+(2-ledger)*6;
+      line(x-10,ledgerY,x+10,ledgerY);
+    }
     ctx.beginPath();
     ctx.ellipse(x,y,7,4.6,-.24,0,Math.PI*2);
     ctx.fill();
-    line(x+6,y,x+6,y-32);
+    const up=degree<6||quiz.meter==='6/8';
+    line(x+(up?6:-6),y,x+(up?6:-6),y+(up?-32:32));
     if(quiz.meter==='6/8') {
       ctx.beginPath(); ctx.moveTo(x+6,y-32);ctx.quadraticCurveTo(x+19,y-26,x+14,y-16);ctx.stroke();
     }
   });
-  canvas.setAttribute('aria-label',`${quiz.meter} โน้ต ${quiz.degrees.map(degree=>letters[degree]+'4').join(' ')}`);
+  const labels=quiz.labels||quiz.degrees.map(degree=>letters[degree]+'4');
+  canvas.setAttribute('aria-label',`${quiz.meter||'กุญแจซอล'} โน้ต ${labels.join(' ')}`);
 }
 function renderQuiz(mode,category){
   const list=categories[mode];
@@ -291,9 +306,8 @@ function renderLesson(lesson) {
     <section class="panel"><h2>วิธีทำทีละขั้น</h2>
     <ol class="lesson-steps">${lesson.steps.map(step=>`<li>${step}</li>`).join('')}</ol>
     <div class="worked-example"><h3>ตัวอย่าง</h3><p>${lesson.example}</p>
-    ${lesson.clips?`<div class="lesson-actions">${lesson.clips.map((clip,index)=>clipButton('clip-'+index,clip.label)).join('')}</div>`:''}
-    ${lesson.melody?`<div class="lesson-notation"><canvas role="img"></canvas></div>${clipButton('play-melody','ฟังเสียงเทียบ')}`:''}
     </div></section>
+    ${lessonVisualMarkup(lesson.id)}
     <section class="panel"><h2>ลองตอบ</h2><p>${lesson.question}</p>
     ${lesson.audio?clipButton('play-check','ฟังเสียงโจทย์'):''}
     <div id="audio-status" role="status"></div><div class="options">
@@ -304,11 +318,7 @@ function renderLesson(lesson) {
     ${previous?`<a class="button" href="#lessons/${previous.id}">← บทก่อนหน้า</a>`:''}
     <a class="button primary" href="#${practiceLink}">ฝึกต่อในห้องฝึก ↗</a>
     <a class="button" href="${next?'#lessons/'+next.id:'#lessons'}">${next?'บทถัดไป →':'บทเรียนทั้งหมด'}</a></div></div>`;
-  lesson.clips?.forEach((clip,index)=>{get('clip-'+index).onclick=()=>playQuestion(clip);});
-  if(lesson.melody){
-    drawMusic(room.querySelector('canvas'),lesson.melody);
-    get('play-melody').onclick=()=>playQuestion({...lesson.melody,practice:true,sequence:true});
-  }
+  mountLessonVisual(lesson.id);
   if(lesson.audio) get('play-check').onclick=()=>playQuestion(lesson);
   const buttons=[...room.querySelectorAll('[data-answer]')];
   for(const button of buttons) button.onclick=()=>{
@@ -328,6 +338,8 @@ function renderLesson(lesson) {
 function route(){
   clearInterval(clockId);
   clearInterval(backingTimeout);
+  closeLessonVisual?.();
+  closeLessonVisual=undefined;
   stopAudio();
   const [name,topic]=location.hash.slice(1).split('/');
   const active=name==='lessons'||Object.hasOwn(titles,name);

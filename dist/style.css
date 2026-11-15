@@ -33,6 +33,31 @@
 .lesson-notation canvas{height:125px;display:block}
 .lesson-navigation{justify-content:space-between}
 .lesson-passed{background:#d4eeb5;padding:8px 12px;border-radius:8px;font-weight:700}
+.lesson-visual .field{max-width:460px}
+.lesson-visual .visual-detail{margin:10px 0;color:var(--muted)}
+.lesson-visual .visual-guide{font-size:12px;color:var(--muted);margin:6px 0 0}
+.visual-stage{position:relative;height:clamp(132px,32vw,230px);overflow:hidden;border-radius:14px;border:1px solid #dbe6d7;background:radial-gradient(ellipse at 50% 42%,#fbfcf3,#e4ecdf)}
+.visual-stage[data-kind="bars"]{height:clamp(105px,22vw,160px)}
+.visual-webgl{display:none;position:absolute;inset:0;width:100%;height:100%;touch-action:manipulation}
+.visual-stage[data-kind="piano"] .visual-webgl{cursor:pointer}
+.has-webgl .visual-webgl{display:block}.has-webgl .visual-fallback{display:none}
+.visual-fallback{position:absolute;inset:0;display:grid;place-items:center;padding:14px}
+.flat-piano{position:relative;width:min(100%,680px);height:78%;max-height:135px}
+.flat-piano button{position:absolute;top:0;left:var(--key-x);width:var(--key-w);padding:0;border:1px solid #cad8c9}
+.flat-piano .white-key{height:100%;border-radius:0 0 6px 6px;background:#fffdf3}
+.flat-piano .black-key{height:62%;z-index:1;border-color:#263f33;border-radius:0 0 4px 4px;background:#263f33}
+.flat-piano .example-key{background:#d6e9a8}.flat-piano .black-key.example-key{background:#8cb453}
+.flat-piano .playing,.flat-piano .black-key.playing{background:#56873c}
+.flat-bars{width:min(100%,650px);height:65%;display:flex;gap:clamp(2px,1vw,7px);align-items:end}
+.flat-bars span{height:42%;flex:1;border-radius:3px;background:#91b8a1}
+.flat-bars .accent{height:90%}
+.flat-bars [data-group="1"]{background:#d8e69b}.flat-bars [data-group="2"]{background:#d7a868}.flat-bars [data-group="3"]{background:#b9a6cf}
+.flat-bars .playing{background:#56873c}
+.visual-notes{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:10px 0 15px}
+.visual-note{padding:5px 8px;border:1px solid #cbd9c7;border-radius:7px;background:#f3f6eb;color:var(--ink);font-size:13px;font-weight:700}
+.visual-note.playing{background:#416a35;border-color:#416a35;color:#fff}
+.visual-step{font-size:11px;color:var(--muted)}
+.lesson-visual .lesson-notation{margin:12px 0 0}
 @media(max-width:720px){.lesson-groups{grid-template-columns:1fr}.progress{grid-template-columns:repeat(4,1fr)}.progress .local-note{grid-column:1/-1;border:0;border-top:1px solid var(--line);padding:7px 12px}}
 @media(max-width:420px){.progress{grid-template-columns:repeat(2,1fr)}.progress>div:nth-child(3){border-left:0}.progress>div:nth-child(3),.progress>div:nth-child(4){border-top:1px solid var(--line)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}

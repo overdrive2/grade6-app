@@ -58,8 +58,7 @@ const lessons = [
   {
     id: 'hear-interval', group: 'ear', practice: 'interval', title: 'ฟังขั้นคู่ขาขึ้น',
     steps: ['ฟังโน้ตแรกให้ชัดแล้วฮัมตาม จากนั้นฮัมโน้ตที่สองและเปรียบเทียบระยะ', 'ฝึกแยกคู่ที่ห่างเพียงครึ่งเสียง เช่น Minor 3rd กับ Major 3rd ก่อนสุ่มโน้ตฐานใหม่'],
-    example: 'ตัวอย่างเล่น Minor 3rd ก่อน แล้วตามด้วย Major 3rd จากโน้ตฐานเดียวกัน',
-    clips: [{label:'ฟัง Minor 3rd',audio:[60,63],sequence:true},{label:'ฟัง Major 3rd',audio:[60,64],sequence:true}],
+    example: 'เลือก Minor 3rd และ Major 3rd สลับกันในภาพด้านล่าง ทั้งสองตัวอย่างเริ่มจาก C',
     question: 'ลองฟังเสียงโจทย์ ระยะห่างเป็นขั้นคู่ใด?', audio: [62,69], sequence: true,
     options: ['Perfect 4th', 'Tritone', 'Perfect 5th'], answer: 2,
     explanation: 'เสียงโจทย์ขึ้นจาก D ไป A ห่าง 7 ครึ่งเสียง'
@@ -68,7 +67,6 @@ const lessons = [
     id: 'hear-triad', group: 'ear', practice: 'triad', title: 'ฟังทรัยแอดโดยเทียบชนิดคอร์ด',
     steps: ['ฟังตัวอย่างที่ใช้รากเดียวกันและสังเกตการเปลี่ยนขั้น 3 ระหว่าง Major กับ Minor', 'เทียบ Minor กับ Diminished โดยฟังการลดขั้น 5 ลงครึ่งเสียง และเทียบ Major กับ Augmented โดยฟังการยกขั้น 5 ขึ้นครึ่งเสียง'],
     example: 'ตัวอย่างทั้งสี่ใช้ C เป็นราก ให้ลองฟังสลับกันก่อนตอบ',
-    clips: Object.entries(triads).map(([label, steps]) => ({label, audio:steps.map(step => 60 + step)})),
     question: 'ฟังเสียงโจทย์แล้วระบุชนิดทรัยแอด', audio: [62,65,68],
     options: ['Diminished', 'Major', 'Minor'], answer: 0,
     explanation: 'ได้ยิน D–F–A♭ ซึ่งมีขั้น 3 ห่าง 3 ครึ่งเสียงและขั้น 5 ห่าง 6 ครึ่งเสียงจากราก'
@@ -77,7 +75,6 @@ const lessons = [
     id: 'hear-seventh', group: 'ear', practice: 'seventh', title: 'จำแนกเซเว่นคอร์ดจากเสียง',
     steps: ['ลองฟัง Major Seventh กับ Dominant Seventh ที่มีทรัยแอดฐานเหมือนกัน แล้วเทียบเสียงตัวบน', 'ฟัง Half-Diminished เทียบกับ Full-Diminished ด้วยวิธีเดียวกัน ต่อด้วย Minor Seventh แล้วลองสุ่มราก'],
     example: 'ตัวอย่างทั้งห้าชนิดเล่นจากราก C เพื่อให้สังเกตความเปลี่ยนของโน้ตในคอร์ด',
-    clips: Object.entries(sevenths).map(([label, steps]) => ({label, audio:steps.map(step => 60 + step)})),
     question: 'ฟังเสียงโจทย์แล้วระบุชนิดเซเว่นคอร์ด', audio: [62,66,69,72],
     options: ['Major Seventh', 'Dominant Seventh', 'Minor Seventh'], answer: 1,
     explanation: 'D–F♯–A เป็น Major Triad และ C อยู่เหนือ D 10 ครึ่งเสียง'
@@ -94,7 +91,6 @@ const lessons = [
     id: 'sight', group: 'ear', practice: 'sight', title: 'ร้องจากโน้ตด้วยโซลเฟจ',
     steps: ['อ่านกุญแจเสียง คีย์ อัตราจังหวะ และโน้ตเริ่มต้นก่อนร้อง', 'ตบจังหวะเงียบ ๆ หนึ่งรอบ แล้วมองช่วงที่ทำนองกระโดด ฝึกใน 2/4, 3/4, 4/4 และ 6/8', 'Fixed-Do ให้ C เป็นโด ส่วน Movable-Do ให้โทนิกของคีย์เป็นโด เลือกระบบที่คุ้นแล้วใช้ให้สม่ำเสมอ'],
     example: 'ร้องตัวอย่าง C Major จากโน้ตด้วยตัวเองก่อน จากนั้นเปิดเสียงเทียบทีละตัว',
-    melody: {meter:'3/4',beats:3,degrees:[0,1,2,4,2,0], audio:[60,62,64,67,64,60]},
     question: 'ใน G Major โน้ตใดคือโดเมื่อใช้ Movable-Do?', options: ['G', 'C', 'D'], answer: 0,
     explanation: 'ในระบบ Movable-Do โดคือขั้นที่ 1 หรือโทนิกของคีย์'
   },
