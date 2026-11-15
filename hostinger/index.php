@@ -30,6 +30,7 @@ function serve(string $file, string $type): never
 // These two files are also used by the public sign-in page.
 if ($pathname === '/style.css') serve($private . '/assets/style.css', $assetTypes['css']);
 if ($pathname === '/entry.js') serve($private . '/entry.js', $assetTypes['js']);
+if ($pathname === '/about.html') serve($private . '/assets/about.html', $assetTypes['html']);
 
 require $private . '/bootstrap.php';
 $authorized = false;
