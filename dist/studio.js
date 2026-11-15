@@ -1,12 +1,13 @@
 const get = id => document.getElementById(id);
 const storageKey='smcc-studio-v1';
-let progress={answered:0,correct:0,checks:{},drafts:{},deadline:0};
+let progress={answered:0,correct:0,checks:{},drafts:{},deadline:0,lessons:{}};
 try { progress={...progress,...JSON.parse(localStorage.getItem(storageKey))}; } catch {}
 function save() {
   try { localStorage.setItem(storageKey,JSON.stringify(progress)); } catch {}
   get('answered').textContent=progress.answered;
   get('accuracy').textContent=progress.answered?Math.round(100*progress.correct/progress.answered)+'%':'–';
   get('checked').textContent=Object.values(progress.checks).filter(Boolean).length;
+  get('completed').textContent=lessons.filter(lesson=>progress.lessons[lesson.id]).length+'/'+lessons.length;
 }
 save();
 const titles={
@@ -95,14 +96,17 @@ function drawMusic(canvas, quiz){
   });
   canvas.setAttribute('aria-label',`${quiz.meter} โน้ต ${quiz.degrees.map(degree=>letters[degree]+'4').join(' ')}`);
 }
-function renderQuiz(mode){
+function renderQuiz(mode,category){
   const list=categories[mode];
   get('body').innerHTML=`<div class="panel"><div class="controls">
   <label class="field">หัวข้อฝึก<select id="category">${Object.entries(list).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label>
   <button class="button" id="next" type="button">สุ่มโจทย์ใหม่ ↻</button></div><div id="challenge"></div></div>`;
   const generate=()=>{
     stopAudio();
-    const quiz=makeQuestion(mode,get('category').value);
+    const selected=get('category').value;
+    const quiz=makeQuestion(mode,selected);
+    const lesson=lessons.find(entry=>entry.group===mode&&entry.practice===selected);
+    get('room-lesson').href='#lessons/'+lesson.id;
     let answered=false;
     get('challenge').innerHTML=`<h2>${quiz.question}</h2>
       ${quiz.practice?`<p class="hint">C Major • ${quiz.meter} • 2 ห้อง • ${quiz.sight?'ใช้ Fixed-Do หรือ Movable-Do':'เขียนคำตอบลงกระดาษก่อนดูเฉลย'}</p>
@@ -130,6 +134,7 @@ function renderQuiz(mode){
       get('feedback').textContent=`${correct?'ถูกต้อง':`คำตอบคือ ${quiz.answer}`} · ${quiz.explanation}`;
     };
   };
+  if(Object.hasOwn(list,category)) get('category').value=category;
   get('category').onchange=generate;
   get('next').onclick=generate;
   generate();
@@ -260,12 +265,72 @@ function renderClassical(){
   selection.onchange=()=>{progress.instrument=selection.value;save();showTasks();};
   showTasks();
 }
+function renderLessonIndex() {
+  const incomplete=lessons.find(lesson=>!progress.lessons[lesson.id]);
+  room.innerHTML=`<a class="back" href="#home">← หน้าหลัก</a>
+    <header class="room-head"><p class="eyebrow">SMCC · GRADE 6</p><h1 tabindex="-1">บทเรียน</h1>
+    <p>เรียนหลักการจากตัวอย่าง แล้วลองตอบก่อนเข้าห้องฝึก</p>
+    ${incomplete?`<a class="button primary" href="#lessons/${incomplete.id}">${lessons.some(lesson=>progress.lessons[lesson.id])?'เรียนบทถัดไป':'เริ่มบทแรก'}</a>`:''}</header>
+    <div class="lesson-groups">${Object.entries(lessonGroups).map(([group,title])=>{
+      const list=lessons.filter(lesson=>lesson.group===group);
+      const completed=list.filter(lesson=>progress.lessons[lesson.id]).length;
+      return `<section class="panel lesson-group"><div class="lesson-group-title"><h2>${title}</h2><span>ผ่าน ${completed}/${list.length} บท</span></div>
+      <ol>${list.map(lesson=>`<li><a href="#lessons/${lesson.id}"><span>${lesson.title}</span><span class="lesson-state">${progress.lessons[lesson.id]?'ผ่านแล้ว ✓':'→'}</span></a></li>`).join('')}</ol></section>`;
+    }).join('')}</div>`;
+}
+
+function renderLesson(lesson) {
+  const position=lessons.indexOf(lesson);
+  const previous=lessons[position-1];
+  const next=lessons[position+1];
+  const practiceLink=[lesson.group,lesson.practice].filter(Boolean).join('/');
+  const clipButton=(id,label)=>`<button class="button" type="button" id="${id}">▶ ${label}</button>`;
+  room.innerHTML=`<a class="back" href="#lessons">← บทเรียนทั้งหมด</a>
+    <header class="room-head"><p>${lessonGroups[lesson.group]} · บทที่ ${position+1}/${lessons.length}</p><h1 tabindex="-1">${lesson.title}</h1></header>
+    <div class="lesson-content">
+    <section class="panel"><h2>วิธีทำทีละขั้น</h2>
+    <ol class="lesson-steps">${lesson.steps.map(step=>`<li>${step}</li>`).join('')}</ol>
+    <div class="worked-example"><h3>ตัวอย่าง</h3><p>${lesson.example}</p>
+    ${lesson.clips?`<div class="lesson-actions">${lesson.clips.map((clip,index)=>clipButton('clip-'+index,clip.label)).join('')}</div>`:''}
+    ${lesson.melody?`<div class="lesson-notation"><canvas role="img"></canvas></div>${clipButton('play-melody','ฟังเสียงเทียบ')}`:''}
+    </div></section>
+    <section class="panel"><h2>ลองตอบ</h2><p>${lesson.question}</p>
+    ${lesson.audio?clipButton('play-check','ฟังเสียงโจทย์'):''}
+    <div id="audio-status" role="status"></div><div class="options">
+    ${lesson.options.map((option,index)=>`<button class="button" data-answer="${index}" type="button">${option}</button>`).join('')}
+    </div><p id="lesson-feedback" class="feedback" role="status"></p>
+    <p id="lesson-passed" class="lesson-passed" ${progress.lessons[lesson.id]?'':'hidden'}>✓ ผ่านแบบทบทวนบทนี้แล้ว</p></section>
+    <div class="lesson-actions lesson-navigation">
+    ${previous?`<a class="button" href="#lessons/${previous.id}">← บทก่อนหน้า</a>`:''}
+    <a class="button primary" href="#${practiceLink}">ฝึกต่อในห้องฝึก ↗</a>
+    <a class="button" href="${next?'#lessons/'+next.id:'#lessons'}">${next?'บทถัดไป →':'บทเรียนทั้งหมด'}</a></div></div>`;
+  lesson.clips?.forEach((clip,index)=>{get('clip-'+index).onclick=()=>playQuestion(clip);});
+  if(lesson.melody){
+    drawMusic(room.querySelector('canvas'),lesson.melody);
+    get('play-melody').onclick=()=>playQuestion({...lesson.melody,practice:true,sequence:true});
+  }
+  if(lesson.audio) get('play-check').onclick=()=>playQuestion(lesson);
+  const buttons=[...room.querySelectorAll('[data-answer]')];
+  for(const button of buttons) button.onclick=()=>{
+    if(button.getAttribute('aria-disabled')==='true') return;
+    const correct=Number(button.dataset.answer)===lesson.answer;
+    button.classList.add(correct?'correct':'incorrect');
+    button.setAttribute('aria-disabled','true');
+    get('lesson-feedback').textContent=correct?lesson.explanation:'ลองอีกครั้ง หรือย้อนดูตัวอย่างด้านบน';
+    if(!correct) return;
+    buttons.forEach(option=>option.setAttribute('aria-disabled','true'));
+    progress.lessons[lesson.id]=true;
+    save();
+    get('lesson-passed').hidden=false;
+  };
+}
+
 function route(){
   clearInterval(clockId);
   clearInterval(backingTimeout);
   stopAudio();
-  const name=location.hash.slice(1);
-  const active=Object.hasOwn(titles,name);
+  const [name,topic]=location.hash.slice(1).split('/');
+  const active=name==='lessons'||Object.hasOwn(titles,name);
   get('home').hidden=active;
   room.hidden=!active;
   if(!active){
@@ -274,12 +339,21 @@ function route(){
     else window.scrollTo(0,0);
     return;
   }
-  const [english,thai,description]=titles[name];
-  room.innerHTML=`<a class="back" href="#modules">← ห้องฝึกทั้งหมด</a>
-    <header class="room-head"><p class="eyebrow">${english}</p><h1 tabindex="-1">${thai}</h1><p>${description}</p></header><div id="body"></div>`;
-  if(name==='song') renderSong();
-  else if(name==='classical') renderClassical();
-  else renderQuiz(name);
+  if(name==='lessons'){
+    const lesson=lessons.find(entry=>entry.id===topic);
+    if(lesson) renderLesson(lesson);
+    else renderLessonIndex();
+  }else{
+    const [english,thai,description]=titles[name];
+    const lesson=lessons.find(entry=>entry.group===name&&entry.practice===topic)
+      ||lessons.find(entry=>entry.group===name);
+    room.innerHTML=`<a class="back" href="#modules">← ห้องฝึกทั้งหมด</a>
+      <header class="room-head"><p class="eyebrow">${english}</p><h1 tabindex="-1">${thai}</h1><p>${description}</p>
+      <a class="button secondary" id="room-lesson" href="#lessons/${lesson.id}">อ่านบทเรียน ${thai}</a></header><div id="body"></div>`;
+    if(name==='song') renderSong();
+    else if(name==='classical') renderClassical();
+    else renderQuiz(name,topic);
+  }
   window.scrollTo(0,0);
   room.querySelector('h1').focus({preventScroll:true});
 }
