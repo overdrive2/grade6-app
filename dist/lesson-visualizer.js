@@ -2,9 +2,9 @@ const whiteSteps = [0,2,4,5,7,9,11];
 let threeImport;
 let closeLessonVisual;
 
-function visualKeys(audio) {
+function visualKeys(audio,rangeEnd) {
   const start = Math.floor(Math.min(...audio)/12)*12;
-  const end = Math.ceil(Math.max(...audio)/12)*12;
+  const end = rangeEnd??Math.ceil(Math.max(...audio)/12)*12;
   const keys = [];
   let white = 0;
   for(let midi=start;midi<=end;midi++){
@@ -94,7 +94,7 @@ function createLessonScene(THREE, stage, selectKey) {
     if(contextLost) return;
     disposeMeshes();
     if(example.audio){
-      const {keys,width}=visualKeys(example.audio);
+      const {keys,width}=visualKeys(example.audio,example.rangeEnd);
       extent=width;
       camera.position.set(0,9,6.5);
       camera.lookAt(0,0,0);
@@ -160,7 +160,7 @@ function createLessonScene(THREE, stage, selectKey) {
 
 function mountLessonVisual(id) {
   const panel=room.querySelector('.lesson-visual');
-  const {examples}=lessonVisuals[id];
+  const {examples,showSteps}=lessonVisuals[id];
   const stage=panel.querySelector('[data-visual-stage]');
   const fallback=stage.querySelector('.visual-fallback');
   const notes=panel.querySelector('[data-visual-notes]');
@@ -236,11 +236,18 @@ function mountLessonVisual(id) {
         });
       }else{
         const bars=visualBars(example.groups);
-        const beat=example.labels?.length ? .50 : .31;
-        bars.forEach(({accent},index)=>playTone(accent?88:76,start+index*beat,.075,accent?.15:.09));
+        const beat=example.sustain ? .58 : example.labels?.length ? .50 : .31;
+        bars.forEach(({accent,group},index)=>{
+          const time=start+index*beat;
+          if(example.sustain){
+            if(accent) playPiano(60,time,example.groups[group]*beat-.09,.16);
+          }else{
+            playTone(accent?88:76,time,.075,accent?.15:.09);
+          }
+        });
         animate(start,beat,bars.length,index=>highlight([],index));
       }
-    },example.audio);
+    },example.audio??(example.sustain?[60]:[]));
   }
   function drawStaff(position=-1){
     const meter=example.meter;
@@ -256,19 +263,19 @@ function mountLessonVisual(id) {
     panel.querySelector('[data-visual-detail]').textContent=example.detail;
     panel.querySelector('[data-visual-guide]').textContent=example.audio
       ? 'คีย์สีเขียวคือโน้ตในตัวอย่าง กดแป้นหรือชื่อโน้ตเพื่อฟังทีละเสียง'
-      : `หนึ่งแท่งแทนหนึ่ง${example.unit} แท่งสูงคือจุดเริ่มของแต่ละกลุ่ม`;
+      : `หนึ่งแท่งแทนหนึ่ง${example.unit} แท่งสูงคือ${example.sustain?'จุดเริ่มเสียงใหม่':'จุดเริ่มของแต่ละกลุ่ม'}`;
     staff.hidden=!example.staff;
     if(example.staff) drawStaff();
     if(example.audio){
-      const {keys,width}=visualKeys(example.audio);
+      const {keys,width}=visualKeys(example.audio,example.rangeEnd);
       stage.dataset.kind='piano';
       fallback.innerHTML=`<div class="flat-piano">${keys.map(({midi,dark,x})=>`<button type="button" aria-label="${notesForMidi(midi)}" data-midi="${midi}"
        class="${dark?'black-key':'white-key'} ${example.audio.includes(midi)?'example-key':''}"
        style="--key-x:${100*(x+(dark?.20:0))/width}%;--key-w:${(dark?58:100)/width}%"></button>`).join('')}</div>`;
       notes.innerHTML=example.labels.map((label,index)=>{
         const delta=Math.abs(example.audio[index+1]-example.audio[index]);
-        const step=id==='scale'&&delta?`<span class="visual-step">${delta===1?'ครึ่ง':delta===2?'เต็ม':'เต็มครึ่ง'}</span>`:'';
-        return `<button type="button" class="visual-note" data-note="${index}">${label}</button>${step}`;
+        const step=showSteps&&delta?`<span class="visual-step">${delta===1?'ครึ่ง':delta===2?'เต็ม':'เต็มครึ่ง'}</span>`:'';
+        return `<button type="button" class="visual-note" data-note="${index}">${example.captions?.[index]||label}</button>${step}`;
       }).join('');
       for(const button of fallback.querySelectorAll('[data-midi]')) button.onclick=()=>playKey(Number(button.dataset.midi));
       for(const button of notes.querySelectorAll('[data-note]')){

@@ -310,27 +310,35 @@ function renderClassical(){
   showTasks();
 }
 function renderLessonIndex() {
-  const incomplete=lessons.find(lesson=>!progress.lessons[lesson.id]);
+  const foundation=lessons.filter(lesson=>lesson.group==='beginner');
+  const remaining=foundation.find(lesson=>!progress.lessons[lesson.id]);
+  const started=foundation.some(lesson=>progress.lessons[lesson.id]);
+  const groupMarkup=(group,title)=>{
+    const list=lessons.filter(lesson=>lesson.group===group);
+    const completed=list.filter(lesson=>progress.lessons[lesson.id]).length;
+    return `<section class="panel lesson-group" data-lesson-group="${group}"><div class="lesson-group-title"><h2>${title}</h2><span>ผ่าน ${completed}/${list.length} บท</span></div>
+      <ol>${list.map(lesson=>`<li><a href="#lessons/${lesson.id}"><span>${lesson.title}</span><span class="lesson-state">${progress.lessons[lesson.id]?'ผ่านแล้ว ✓':'→'}</span></a></li>`).join('')}</ol></section>`;
+  };
   room.innerHTML=`<a class="back" href="#home">← หน้าหลัก</a>
     <header class="room-head"><p class="eyebrow">SMCC · GRADE 6</p><h1 tabindex="-1">บทเรียน</h1>
-    <p>เรียนหลักการจากตัวอย่าง แล้วลองตอบก่อนเข้าห้องฝึก</p>
-    ${incomplete?`<a class="button primary" href="#lessons/${incomplete.id}">${lessons.some(lesson=>progress.lessons[lesson.id])?'เรียนบทถัดไป':'เริ่มบทแรก'}</a>`:''}</header>
-    <div class="lesson-groups">${Object.entries(lessonGroups).map(([group,title])=>{
-      const list=lessons.filter(lesson=>lesson.group===group);
-      const completed=list.filter(lesson=>progress.lessons[lesson.id]).length;
-      return `<section class="panel lesson-group"><div class="lesson-group-title"><h2>${title}</h2><span>ผ่าน ${completed}/${list.length} บท</span></div>
-      <ol>${list.map(lesson=>`<li><a href="#lessons/${lesson.id}"><span>${lesson.title}</span><span class="lesson-state">${progress.lessons[lesson.id]?'ผ่านแล้ว ✓':'→'}</span></a></li>`).join('')}</ol></section>`;
-    }).join('')}</div>`;
+    <p>เริ่มจากการฟังเสียงและอ่านโน้ต หรือเลือกหัวข้อเตรียมสอบเกรด 6 ได้เลย</p>
+    <a class="button primary" href="#lessons/${remaining?.id||'reading'}">${remaining?(started?'เรียนพื้นฐานต่อ':'เริ่มจากศูนย์'):'เริ่มบทเรียนเกรด 6'}</a></header>
+    ${groupMarkup('beginner',lessonGroups.beginner)}
+    <h2 class="exam-lessons-heading">บทเรียนเตรียมสอบเกรด 6</h2>
+    <div class="lesson-groups">${Object.entries(lessonGroups).filter(([group])=>group!=='beginner').map(([group,title])=>groupMarkup(group,title)).join('')}</div>`;
 }
 
 function renderLesson(lesson) {
-  const position=lessons.indexOf(lesson);
-  const previous=lessons[position-1];
-  const next=lessons[position+1];
+  const beginner=lesson.group==='beginner';
+  const phase=lessons.filter(entry=>(entry.group==='beginner')===beginner);
+  const position=phase.indexOf(lesson);
+  const previous=phase[position-1];
+  const next=phase[position+1];
   const practiceLink=[lesson.group,lesson.practice].filter(Boolean).join('/');
   const clipButton=(id,label)=>`<button class="button" type="button" id="${id}">▶ ${label}</button>`;
   room.innerHTML=`<a class="back" href="#lessons">← บทเรียนทั้งหมด</a>
-    <header class="room-head"><p>${lessonGroups[lesson.group]} · บทที่ ${position+1}/${lessons.length}</p><h1 tabindex="-1">${lesson.title}</h1></header>
+    <header class="room-head"><p>${beginner?'พื้นฐานจากศูนย์':'เกรด 6 · '+lessonGroups[lesson.group]} · บทที่ ${position+1}/${phase.length}</p>
+    <h1 tabindex="-1">${lesson.title}</h1>${lesson.goal?`<p class="lesson-goal">จบบทนี้แล้วคุณจะ${lesson.goal}</p>`:''}</header>
     <div class="lesson-content">
     <section class="panel"><h2>วิธีทำทีละขั้น</h2>
     <ol class="lesson-steps">${lesson.steps.map(step=>`<li>${step}</li>`).join('')}</ol>
@@ -345,8 +353,8 @@ function renderLesson(lesson) {
     <p id="lesson-passed" class="lesson-passed" ${progress.lessons[lesson.id]?'':'hidden'}>✓ ผ่านแบบทบทวนบทนี้แล้ว</p></section>
     <div class="lesson-actions lesson-navigation">
     ${previous?`<a class="button" href="#lessons/${previous.id}">← บทก่อนหน้า</a>`:''}
-    <a class="button primary" href="#${practiceLink}">ฝึกต่อในห้องฝึก ↗</a>
-    <a class="button" href="${next?'#lessons/'+next.id:'#lessons'}">${next?'บทถัดไป →':'บทเรียนทั้งหมด'}</a></div></div>`;
+    ${beginner?'':`<a class="button primary" href="#${practiceLink}">ฝึกต่อในห้องฝึก ↗</a>`}
+    <a class="button${beginner?' primary':''}" href="${next?'#lessons/'+next.id:beginner?'#lessons/reading':'#lessons'}">${next?'บทถัดไป →':beginner?'ไปบทเรียนเกรด 6 →':'บทเรียนทั้งหมด'}</a></div></div>`;
   mountLessonVisual(lesson.id);
   if(lesson.audio) get('play-check').onclick=()=>playQuestion(lesson);
   const buttons=[...room.querySelectorAll('[data-answer]')];
