@@ -64,6 +64,15 @@
 .account-panel{max-width:720px;margin-inline:auto}
 .account-panel input{background:#fffefa;border:1px solid #acb9aa;border-radius:9px;padding:9px 12px;color:var(--ink);max-width:420px;width:100%}
 .account-panel input:focus-visible{outline:3px solid #9b6100;outline-offset:3px}
+.entry-nav{display:flex;align-items:center;gap:12px}
+.entry-layout{display:grid;grid-template-columns:1.12fr 1fr;gap:20px;align-items:start;padding-bottom:24px}
+.entry-hero{min-height:380px}
+.entry-hero h1{font-size:clamp(34px,4vw,56px)}
+.entry-panel h2{font-size:clamp(21px,3vw,29px)}
+.entry-panel input{background:#fffefa;border:1px solid #acb9aa;border-radius:9px;padding:9px 12px;color:var(--ink);width:100%}
+.entry-panel input:focus-visible{outline:3px solid #9b6100;outline-offset:2px}
+.entry-panel form p{margin:0}
+@media(max-width:800px){.entry-layout{grid-template-columns:1fr}.entry-hero{min-height:0}.entry-hero .hero-copy{padding:26px}}
 .audio-credit{font-size:12px}.audio-credit a{text-decoration:underline;text-underline-offset:2px}
 #audio-status:not(:empty){margin-top:8px;font-size:13px;color:var(--muted)}
 .lesson-visual .lesson-notation{margin:12px 0 0}

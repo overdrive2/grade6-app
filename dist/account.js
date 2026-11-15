@@ -7,6 +7,9 @@ let accountDirty=false;
 let accountSaving=false;
 let accountConflict=false;
 let accountSyncMessage='';
+let csrfToken;
+const passwordAuth=document.documentElement.dataset.auth==='password';
+const isAccountPage=()=>location.hash==='#account'||location.hash.startsWith('#account/');
 const signInURL='/signin-with-chatgpt?return_to=%2F%23account';
 const signOutURL='/signout-with-chatgpt?return_to=%2F';
 
@@ -25,14 +28,19 @@ function showSync(message){
 
 async function accountRequest(path='/api/account',method='GET',body){
   const payload=body?JSON.stringify(body):undefined;
-  const response=await fetch(path,{
+  const endpoint=passwordAuth?'api/index.php?route='+encodeURIComponent(path.split('/').at(-1)):path;
+  const headers=body?{'Content-Type':'application/json'}:{};
+  if(passwordAuth&&csrfToken) headers['X-SMCC-CSRF']=csrfToken;
+  const response=await fetch(endpoint,{
     method,credentials:'same-origin',cache:'no-store',
-    headers:body?{'Content-Type':'application/json'}:undefined,
+    headers,
     body:payload,
     keepalive:method==='PUT'&&new TextEncoder().encode(payload).length<60000
   });
   if(!response.ok) throw Object.assign(new Error('Account request failed'),{status:response.status});
-  return response.json();
+  const result=await response.json();
+  if(result.csrfToken) csrfToken=result.csrfToken;
+  return result;
 }
 
 function queueAccountSave(){
@@ -83,6 +91,16 @@ function readGuestProgress(){
   }catch{}
 }
 
+function returnToGuest(){
+  saveAccountProgress=undefined;
+  accountProfile=undefined;
+  accountDirty=false;
+  accountConflict=false;
+  progress={...blankProgress(),...readGuestProgress()};
+  save(false);
+  get('progress-location').textContent='เก็บความคืบหน้าในเบราว์เซอร์นี้';
+}
+
 function importGuestProgress(){
   const guest=readGuestProgress();
   if(!guest) return;
@@ -104,16 +122,15 @@ function importGuestProgress(){
 async function refreshAccount(){
   try {
     const profile=await accountRequest();
+    if(passwordAuth&&profile.state!=='registered'){
+      location.replace('./?signedout=1#account/login');
+      return;
+    }
     accountState=profile.state;
     if(profile.state==='registered') useAccount(profile);
     else{
       registrationAccountId=profile.accountId;
-      if(saveAccountProgress){
-        saveAccountProgress=undefined;
-        progress={...blankProgress(),...readGuestProgress()};
-        save(false);
-        get('progress-location').textContent='เก็บความคืบหน้าในเบราว์เซอร์นี้';
-      }
+      if(saveAccountProgress) returnToGuest();
     }
   }catch{
     if(accountState==='registered'){
@@ -122,7 +139,7 @@ async function refreshAccount(){
     }
     accountState='unavailable';
   }
-  if(location.hash==='#account'||accountState==='registered') route();
+  if(isAccountPage()||accountState==='registered') route();
 }
 
 function accountMarkup(){
@@ -135,7 +152,8 @@ function accountMarkup(){
       <button type="button" class="button" id="account-refresh" hidden>โหลดข้อมูลล่าสุดและละทิ้งรายการที่ยังรอบันทึก</button>
       ${guest?'<button type="button" class="button" id="account-import">รวมความคืบหน้าจากเบราว์เซอร์นี้</button>':''}
       <a class="button primary" href="#lessons">ไปที่บทเรียน</a>
-      <a class="button" id="account-signout" href="${signOutURL}" target="_top">ออกจากระบบ</a>
+      ${passwordAuth?'<button class="button" type="button" id="account-signout">ออกจากระบบ</button>':
+        `<a class="button" id="account-signout" href="${signOutURL}" target="_top">ออกจากระบบ</a>`}
     </div>`;
   if(accountState==='unregistered') return `<h2>ลงทะเบียนโปรไฟล์ผู้เรียน</h2>
     <p>ตั้งชื่อที่จะแสดงใน SMCC เพื่อบันทึกบทเรียนที่ผ่าน คะแนน เช็กลิสต์ และร่างคำร้องกับบัญชี ChatGPT ที่คุณเข้าสู่ระบบไว้</p>
@@ -162,11 +180,26 @@ renderAccountView=()=>{
     get('account-retry').onclick=flushAccountSave;
     get('account-refresh').onclick=refreshAccount;
     if(get('account-import')) get('account-import').onclick=importGuestProgress;
-    get('account-signout').onclick=event=>{
-      if(!accountDirty&&!accountSaving) return;
-      event.preventDefault();
-      if(!accountConflict) flushAccountSave();
-      showSync(accountConflict?accountSyncMessage:'รอบันทึกให้เสร็จก่อนออกจากระบบ');
+    get('account-signout').onclick=async event=>{
+      if(accountDirty||accountSaving){
+        event.preventDefault();
+        if(!accountConflict) flushAccountSave();
+        showSync(accountConflict?accountSyncMessage:'รอบันทึกให้เสร็จก่อนออกจากระบบ');
+        return;
+      }
+      if(!passwordAuth) return;
+      const button=event.currentTarget;
+      button.disabled=true;
+      try{
+        await accountRequest('/api/logout','POST',{});
+        csrfToken=undefined;
+        returnToGuest();
+        location.replace('./?signedout=1#account/login');
+      }catch{
+        showSync('ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง');
+      }finally{
+        button.disabled=false;
+      }
     };
   }else if(accountState==='unregistered'){
     get('account-form').onsubmit=async event=>{
@@ -189,11 +222,11 @@ renderAccountView=()=>{
   }
 };
 
-if(location.hash==='#account') route();
+if(isAccountPage()) route();
 window.addEventListener('pagehide',flushAccountSave);
 if(location.protocol==='file:'){
   accountState='unavailable';
-  if(location.hash==='#account') route();
+  if(isAccountPage()) route();
 }else{
   refreshAccount();
 }

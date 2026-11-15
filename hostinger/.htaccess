@@ -1,0 +1,4 @@
+DirectoryIndex index.php
+RewriteEngine On
+RewriteRule ^(?:api/index\.php|index\.php)$ - [L]
+RewriteRule ^ index.php [L]
