@@ -57,6 +57,8 @@
 .visual-note{padding:5px 8px;border:1px solid #cbd9c7;border-radius:7px;background:#f3f6eb;color:var(--ink);font-size:13px;font-weight:700}
 .visual-note.playing{background:#416a35;border-color:#416a35;color:#fff}
 .visual-step{font-size:11px;color:var(--muted)}
+.audio-credit{font-size:12px}.audio-credit a{text-decoration:underline;text-underline-offset:2px}
+#audio-status:not(:empty){margin-top:8px;font-size:13px;color:var(--muted)}
 .lesson-visual .lesson-notation{margin:12px 0 0}
 @media(max-width:720px){.lesson-groups{grid-template-columns:1fr}.progress{grid-template-columns:repeat(4,1fr)}.progress .local-note{grid-column:1/-1;border:0;border-top:1px solid var(--line);padding:7px 12px}}
 @media(max-width:420px){.progress{grid-template-columns:repeat(2,1fr)}.progress>div:nth-child(3){border-left:0}.progress>div:nth-child(3),.progress>div:nth-child(4){border-top:1px solid var(--line)}}

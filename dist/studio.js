@@ -19,12 +19,24 @@ const titles={
 const room=get('room');
 let clockId;
 let context;
+let audioOutput;
 let playing=[];
 let audioJob=0;
 function stopAudio(){
   audioJob++;
   for(const oscillator of playing) oscillator.stop();
   playing=[];
+}
+function scheduleVoice(source,gain,start,end) {
+  source.connect(gain).connect(audioOutput);
+  source.onended=()=>{
+    playing=playing.filter(voice=>voice!==source);
+    source.disconnect();
+    gain.disconnect();
+  };
+  source.start(start);
+  source.stop(end);
+  playing.push(source);
 }
 function playTone(midi,start,length,volume=.10,type='sine') {
   const oscillator=context.createOscillator();
@@ -34,33 +46,47 @@ function playTone(midi,start,length,volume=.10,type='sine') {
   gain.gain.setValueAtTime(0,start);
   gain.gain.linearRampToValueAtTime(volume,start+.025);
   gain.gain.exponentialRampToValueAtTime(.001,start+length);
-  oscillator.connect(gain).connect(context.destination);
-  oscillator.start(start);
-  oscillator.stop(start+length+.01);
-  playing.push(oscillator);
-  oscillator.onended=()=>{
-    playing=playing.filter(voice=>voice!==oscillator);
-    oscillator.disconnect();
-    gain.disconnect();
-  };
+  scheduleVoice(oscillator,gain,start,start+length+.01);
 }
-async function withAudio(action){
+function playPiano(midi,start,length,volume){
+  const voice=createPianoVoice(context,midi,start,length,volume);
+  if(voice) scheduleVoice(voice.source,voice.envelope,start,voice.end);
+  else playTone(midi,start,length,volume,'triangle');
+}
+async function withAudio(action,pitches=[]){
   stopAudio();
   const job=audioJob;
+  const status=get('audio-status');
+  if(status) status.textContent='';
   try {
     const Audio=window.AudioContext||window.webkitAudioContext;
-    context??=new Audio();
+    if(!context){
+      context=new Audio();
+      audioOutput=context.createDynamicsCompressor();
+      audioOutput.threshold.value=-13;
+      audioOutput.knee.value=9;
+      audioOutput.ratio.value=5;
+      audioOutput.connect(context.destination);
+    }
     await context.resume();
-    if(job===audioJob) action(context.currentTime+.07);
+    if(job!==audioJob) return;
+    const missing=pianoNeeded(pitches);
+    if(missing.length&&location.protocol!=='file:'){
+      if(status) status.textContent='กำลังโหลดเสียงแกรนด์เปียโน…';
+      await Promise.all(missing.map(midi=>loadPianoSample(context,midi)));
+    }
+    if(job!==audioJob) return;
+    if(status) status.textContent=pianoNeeded(pitches).length?'ใช้เสียงสำรองเมื่อโหลดตัวอย่างเปียโนไม่ได้':'';
+    action(context.currentTime+.07);
   } catch {
-    if(job===audioJob && get('audio-status')) get('audio-status').textContent='เบราว์เซอร์นี้เปิดเสียงไม่ได้';
+    if(job===audioJob&&status) status.textContent='เบราว์เซอร์นี้เปิดเสียงไม่ได้';
   }
 }
 function playQuestion(question){
   withAudio(start=>question.audio.forEach((pitch,index)=>{
     const beat=question.practice?(question.meter==='6/8'?.33:.53):.55;
-    playTone(pitch,start+(question.sequence?index*beat:0),question.sequence?beat-.07:.95,question.sequence?.18:.11,'triangle');
-  }));
+    playPiano(pitch,start+(question.sequence?index*beat:0),question.sequence?beat-.07:.95,question.sequence?.18:.11);
+  }),question.audio);
 }
 function drawMusic(canvas, quiz){
   const ctx=canvas.getContext('2d');
@@ -178,6 +204,7 @@ function renderSong(){
   };
   function stopBacking(){
     stopAudio();
+    get('audio-status').textContent='';
     clearInterval(backingTimeout);
     room.querySelectorAll('#sections span').forEach(section=>section.classList.remove('active'));
   }
@@ -198,6 +225,8 @@ function renderSong(){
     const tonic=48+pitchClass(get('song-key').value);
     const lengths=songParts[1][structure];
     const beat=60/96;
+    const chords=[...new Set(backingChords[structure].flat())];
+    const pitches=chords.flatMap(chord=>[tonic+chord-12,...patterns[chord].map(interval=>tonic+chord+interval)]);
     withAudio(start=>{
       let bar=0;
       lengths.forEach((length,section)=>{
@@ -205,12 +234,12 @@ function renderSong(){
           const chords=backingChords[structure][section];
           const chord=chords[index%chords.length];
           const time=start+bar*4*beat;
-          playTone(tonic+chord-12,time,beat*1.6,.17);
-          playTone(tonic+chord-12,time+beat*2,beat*1.6,.14);
+          playPiano(tonic+chord-12,time,beat*1.6,.15);
+          playPiano(tonic+chord-12,time+beat*2,beat*1.6,.12);
           for(let count=0;count<4;count++){
             playTone(count===0?91:84,time+count*beat,.055,.035);
             for(const interval of patterns[chord]){
-              playTone(tonic+chord+interval,time+count*beat+.03,beat*.86,.035,'triangle');
+              playPiano(tonic+chord+interval,time+count*beat+.03,beat*.86,.046);
             }
           }
         }
@@ -225,7 +254,7 @@ function renderSong(){
         });
         if(elapsed>=end) clearInterval(backingTimeout);
       },100);
-    });
+    },pitches);
   };
   get('stop').onclick=stopBacking;
   get('structure').onchange=updateStructure;

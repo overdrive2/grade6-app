@@ -195,6 +195,7 @@ function mountLessonVisual(id) {
   function stopVisual(){
     cancelAnimationFrame(frame);
     stopAudio();
+    get('audio-status').textContent='';
     highlight();
   }
   function animate(start,beat,count,update){
@@ -217,9 +218,9 @@ function mountLessonVisual(id) {
   function playKey(midi,position){
     stopVisual();
     withAudio(start=>{
-      playTone(midi,start,.52,.18,'triangle');
+      playPiano(midi,start,.52,.18);
       animate(start,.55,1,()=>highlight([midi],-1,position));
-    });
+    },[midi]);
   }
   function play(){
     stopVisual();
@@ -227,7 +228,7 @@ function mountLessonVisual(id) {
       if(example.audio){
         const beat=example.chord?1.05:.46;
         example.audio.forEach((pitch,index)=>{
-          playTone(pitch,start+(example.chord?0:beat*index),beat-.05,example.chord?.085:.16,'triangle');
+          playPiano(pitch,start+(example.chord?0:beat*index),beat-.05,example.chord?.085:.16);
         });
         animate(start,beat,example.chord?1:example.audio.length,index=>{
           if(example.chord) highlight(example.audio);
@@ -239,7 +240,7 @@ function mountLessonVisual(id) {
         bars.forEach(({accent},index)=>playTone(accent?88:76,start+index*beat,.075,accent?.15:.09));
         animate(start,beat,bars.length,index=>highlight([],index));
       }
-    });
+    },example.audio);
   }
   function drawStaff(position=-1){
     const meter=example.meter;
